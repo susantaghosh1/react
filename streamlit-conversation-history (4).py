@@ -39,10 +39,11 @@ def main():
     st.set_page_config(page_title="Conversation History", layout="wide")
     st.title("Conversation History")
 
-    history = load_history()
+    if 'history' not in st.session_state:
+        st.session_state.history = load_history()
 
     # Pagination
-    total_pages = math.ceil(len(history) / MESSAGES_PER_PAGE)
+    total_pages = math.ceil(len(st.session_state.history) / MESSAGES_PER_PAGE)
     col1, col2, col3 = st.columns([1, 3, 1])
     with col1:
         if "page" not in st.session_state:
@@ -57,10 +58,10 @@ def main():
 
     start_idx = (st.session_state.page - 1) * MESSAGES_PER_PAGE
     end_idx = start_idx + MESSAGES_PER_PAGE
-    page_history = history[start_idx:end_idx]
+    page_history = st.session_state.history[start_idx:end_idx]
 
     # Display and manage messages
-    for i, message in enumerate(page_history, start=start_idx):
+    for message in page_history:
         col1, col2, col3 = st.columns([3, 1, 1])
         
         with col1:
@@ -71,14 +72,14 @@ def main():
         
         with col2:
             if st.button("✏️ Save", key=f"save_{message['id']}"):
-                history[i]['content'] = new_content
-                save_history(history)
+                message['content'] = new_content
+                save_history(st.session_state.history)
                 st.success("Changes saved!")
         
         with col3:
             if st.button("🗑️ Delete", key=f"delete_{message['id']}"):
-                history = [m for m in history if m['id'] != message['id']]
-                save_history(history)
+                st.session_state.history = [m for m in st.session_state.history if m['id'] != message['id']]
+                save_history(st.session_state.history)
                 st.success("Message deleted!")
                 st.experimental_rerun()
 
@@ -89,20 +90,20 @@ def main():
     new_sender = st.selectbox("Sender", ["User", "Coder"])
     new_content = st.text_area("Content")
     if st.button("➕ Add Message"):
-        new_id = max([m['id'] for m in history], default=0) + 1
-        history.append({
+        new_id = max([m['id'] for m in st.session_state.history], default=0) + 1
+        st.session_state.history.append({
             "id": new_id,
             "sender": new_sender,
             "content": new_content
         })
-        save_history(history)
+        save_history(st.session_state.history)
         st.session_state.page = total_pages + 1  # Move to the new last page
         st.success("New message added!")
         st.experimental_rerun()
 
     # Export to CSV
     if st.button("📁 Export to CSV"):
-        df = pd.DataFrame(history)
+        df = pd.DataFrame(st.session_state.history)
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="⬇️ Download CSV",
@@ -121,7 +122,7 @@ def main():
         app_name = st.text_input("Enter Application Name")
         if st.button("Submit"):
             if app_name:
-                filename = save_application(history, app_name)
+                filename = save_application(st.session_state.history, app_name)
                 st.success(f"Application saved as {filename}")
                 st.session_state.show_app_name_input = False
             else:
