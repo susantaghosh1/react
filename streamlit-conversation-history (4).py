@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import os
 import math
+import time
 
 # File to store the conversation history
 HISTORY_FILE = "conversation_history.json"
@@ -115,18 +116,33 @@ def main():
     # Application button and functionality
     st.markdown("---")
     st.subheader("Save as Application")
-    if st.button("📄 Create Application"):
-        st.session_state.show_app_name_input = True
+    
+    # Initialize session state variables
+    if 'show_popup' not in st.session_state:
+        st.session_state.show_popup = False
+    if 'app_name' not in st.session_state:
+        st.session_state.app_name = ""
 
-    if st.session_state.get('show_app_name_input', False):
-        app_name = st.text_input("Enter Application Name")
-        if st.button("Submit"):
-            if app_name:
-                filename = save_application(st.session_state.history, app_name)
-                st.success(f"Application saved as {filename}")
-                st.session_state.show_app_name_input = False
-            else:
-                st.error("Please enter an application name")
+    # Button to show pop-up
+    if st.button("📄 Create Application"):
+        st.session_state.show_popup = True
+
+    # Pop-up for application name input
+    if st.session_state.show_popup:
+        with st.form(key='app_name_form'):
+            st.session_state.app_name = st.text_input("Enter Application Name", key="app_name_input")
+            submit_button = st.form_submit_button(label='Submit')
+
+            if submit_button:
+                if st.session_state.app_name:
+                    with st.spinner('Creating application...'):
+                        filename = save_application(st.session_state.history, st.session_state.app_name)
+                        time.sleep(2)  # Simulating some processing time
+                    st.success(f"Application saved as {filename}")
+                    st.session_state.show_popup = False
+                    st.session_state.app_name = ""
+                else:
+                    st.error("Please enter an application name")
 
 if __name__ == "__main__":
     main()
