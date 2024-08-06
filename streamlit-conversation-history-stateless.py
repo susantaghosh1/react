@@ -30,6 +30,7 @@ def main():
     history = load_history()
 
     # Display and manage messages
+    updated_history = history.copy()
     for i, message in enumerate(history):
         col1, col2, col3 = st.columns([3, 1, 1])
         
@@ -39,40 +40,43 @@ def main():
                                        key=f"message_{message['id']}", 
                                        height=100)
             if new_content != message['content']:
-                message['content'] = new_content
-                save_history(history)
-                st.experimental_rerun()
+                updated_history[i]['content'] = new_content
         
         with col2:
             if st.button("✏️ Save", key=f"save_{message['id']}"):
-                save_history(history)
+                updated_history[i]['content'] = new_content
                 st.success("Changes saved!")
         
         with col3:
             if st.button("🗑️ Delete", key=f"delete_{message['id']}"):
-                del history[i]
-                save_history(history)
-                st.experimental_rerun()
-        
-        st.markdown("---")
+                updated_history = [m for m in updated_history if m['id'] != message['id']]
+                st.success("Message deleted!")
+
+    # Check if history has been modified
+    if updated_history != history:
+        save_history(updated_history)
+        st.experimental_rerun()
+
+    st.markdown("---")
 
     # Add new message
     st.subheader("Add New Message")
     new_sender = st.selectbox("Sender", ["User", "Coder"])
     new_content = st.text_area("Content")
     if st.button("➕ Add Message"):
-        new_id = max([m['id'] for m in history], default=0) + 1
-        history.append({
+        new_id = max([m['id'] for m in updated_history], default=0) + 1
+        updated_history.append({
             "id": new_id,
             "sender": new_sender,
             "content": new_content
         })
-        save_history(history)
+        save_history(updated_history)
+        st.success("New message added!")
         st.experimental_rerun()
 
     # Export to CSV
     if st.button("📁 Export to CSV"):
-        df = pd.DataFrame(history)
+        df = pd.DataFrame(updated_history)
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="⬇️ Download CSV",
